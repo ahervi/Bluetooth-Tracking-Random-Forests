@@ -10,24 +10,23 @@ def on_publish(client, userdata, result):
 mqttc = mqtt.Client()
 mqttc.on_publish = on_publish
 mqttc.connect("192.168.43.143", 1883)
-
+IDPI = 1
 while True:
         with open("./blue_hydra/blue_hydra_rssi.log", "rb") as f:
-              i = 0
-              last =[0]*20
+              found = false
               for line in f:
-                  i = (i + 1) % 20 
-                  last[i] = line
-                  pass
-              timeStamp = 0        
-              for line in reversed(last):  
-                  bssid = line[14:31]
-     
-                  if bssid == "F2:39:F2:6A:80:89" and int(line[:10]) > timeStamp:
-                     timeStamp = line[:10]
-                     rssi = line[-4:]
-              message = str(timeStamp) + "," + rssi
-              print(message)
+              	  bssid = line[14:31]
+                  timeStamp = line[:10]
+                  if last_bssid == bssid and last_timeStamp == timeStamp:
+                  	  found = true
+                  if found:
+                      rssi = line[-4:]
+                      message = IDPI + "," + str(timeStamp) + "," + rssi
+                      print(message)
 
-              mqttc.publish("rpi1", message)
-        time.sleep(10)
+                  	  mqttc.publish("rpis", message)
+                      last_bssid = bssid
+                      last_timeStamp = timeStamp
+
+        found = false
+        time.sleep(1)
