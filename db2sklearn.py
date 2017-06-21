@@ -18,10 +18,14 @@ def givesList(DB_NAME):
 		for id in maxId:
 			MAXID = id[0]
 		
-	
-	header = []
-	for i in range(1, MAXID + 1):
-		header.append("RPI" + str(i))
+		RSSIS = []
+		RSSI_HEADER = []
+		for i in range(MAXID):
+			RSSI_HEADER.append("RPI" + str(i + 1))
+		RSSIS.append(RSSI_HEADER)
+
+		rssiContent = []
+
 
 	with sqlite3.connect(DB_NAME) as conn:
 		cursor = conn.cursor()
@@ -78,35 +82,66 @@ def givesList(DB_NAME):
 	#print(lengthAfter)
 
 
-	return [finalList, header]
+	return finalList
 X = []
 Y = []
 
 # CHANGE DB NAMES HERE
 DBS = ["the", "russia", "behind", "fantome"]
 for name in DBS:
-	liste = givesList(name+".db")[0]
+	liste = givesList(name+".db")
 	X.extend(liste)
 	Y.extend([name]*len(liste))	
 
-lenX = len(X)
-for i in range(lenX):
-	X[i].append(Y[i])
+random.seed(1)
 
-random.shuffle(X)
-header = givesList(DBS[0] + ".db")[1]
-header.append("Pos")
-X.insert(0, header)
+Z = list(zip(X, Y))
 
-X = zip(*X)
+random.shuffle(Z)
 
-length = lenX
+X, Y = zip(*Z)
+clf = RandomForestClassifier(n_estimators=100)
 
-with open("Combined.csv", 'wb') as testfile:
-    csv_writer = csv.writer(testfile)
-    for y in range(length):
-        csv_writer.writerow([x[y] for x in X])
-	
-	
+sizeTest = 1
+if sizeTest != 1:
+	limitTestSample = int(math.floor(int(len(X)*sizeTest)))
+	clf = clf.fit(X[:limitTestSample], Y[:limitTestSample])
+	Ypred = clf.predict(X[limitTestSample:])
+	Yshould = Y[limitTestSample:]
 
+	ratio = 0
+	dicDB = dict()
+	for db in DBS:
+		dicDB[db] = 0
 
+	for j in range(len(Ypred)):
+		if Yshould[j] == Ypred[j]:
+			ratio += 1
+		else:
+			dicDB[Yshould[j]] += 1
+	errors = ratio
+	ratio = float(ratio)
+
+	ratio = ratio / len(Yshould)
+	print("Similarity percentile : " + str(ratio))
+	print(str(len(Yshould)- errors) + " errors on " + str(len(Yshould)) + " : " + str(dicDB))
+else:
+	clf = clf.fit(X, Y)
+	Ypred = clf.predict(X)
+	Yshould = Y
+	ratio = 0
+	dicDB = dict()
+	for db in DBS:
+		dicDB[db] = 0
+
+	for j in range(len(Ypred)):
+		if Yshould[j] == Ypred[j]:
+			ratio += 1
+		else:
+			dicDB[Yshould[j]] += 1
+	errors = ratio
+	ratio = float(ratio)
+
+	ratio = ratio / len(Yshould)
+	print("Similarity percentile : " + str(ratio))
+	print(str(len(Yshould)- errors) + " errors on " + str(len(Yshould)) + " : " + str(dicDB))
