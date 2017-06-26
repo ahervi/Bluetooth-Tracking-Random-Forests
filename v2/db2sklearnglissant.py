@@ -39,64 +39,65 @@ def givesList(DB_NAME, BSSID):
 		for row in rows:
 			liste.append([row[0], row[1].encode("ascii"), row[2].encode("ascii"), row[3], row[4]])
 
-	#On a la liste ordonnee des rssi
+	#We have the rssis list by rpis' id : [id, RSSI] -> liste
 	TIME_WINDOW = 15
 
-	i = 0
-	timeStampBefore = liste[i][3]
-	idBefore = liste[i][0] - 1
 
-	finalList = [[0]*MAXID]
+	#index of the liste containing the succesive RSSIs by id : [RSSI1, RSSI2, ... , RSSIIDMAX] -> finalList
+	i = -1
+
+
+
+	finalList = []
+	list2Add = [0]*MAXID
+	#Initialisation of the timers for each RPIS : 
+
+	timersBefore = [0]*MAXID
+
+	# initialisation of the timers:
+	k = 0
+	while 0 in timersBefore:
+		timersBefore[liste[k][0] - 1] = liste[k][3]
+		k += 1
+
+	timersAfter = [0]*MAXID
+
+
+	idRPI = liste[0][0] - 1
+	#index of liste
 	j = 0
+
 	while j < len(liste):
 		row = liste[j]
-		timeStampAfter = int(row[3])
-		idAfter = row[0] - 1
-		if timeStampAfter - timeStampBefore > TIME_WINDOW:
-			finalList.append([0]*MAXID)
-			i += 1
-			timeStampBefore = timeStampAfter
+		timersAfter[idRPI] = int(row[3])
+		idRPI = row[0] - 1
 
-		else:
-			if isinstance(row[4], numbers.Number) and row[4] < 1:
-				if 0 in finalList[i]:
+		if isinstance(row[4], numbers.Number) and row[4] < 1:
 
-					if finalList[i][idAfter] == 0:
-						finalList[i][idAfter] = row[4]
-					else:
-						finalList[i][idAfter] = float((row[4] + finalList[i][idAfter])) / 2
-				else:
-					finalList.append(finalList[i])
+			#If there have not been an update from all RPIS in the TIME_WINDOW : abandon of current index 
+			# One of the RPIS have not manifested himself
+			for l in range(MAXID):
+				if timersAfter[idRPI] - timersBefore[l] > TIME_WINDOW and l != idRPI:
+					list2Add[l] = 0
+					timersBefore[l] = timersAfter[idRPI]
 
-					finalList[i + 1][idAfter] = row[4]
+		
+			list2Add[idRPI] = row[4]
 
-					i += 1
-					timeStampBefore = timeStampAfter
-		idBefore = idAfter
+			if not 0 in list2Add and (len(finalList) == 0 or (len(finalList) > 0 and list2Add != finalList[-1])): 
+				temp = [0]*MAXID
+				for m in range(MAXID):
+					temp[m] = int(10 * list2Add[m]) / 10.0
+				finalList.append(temp)
+				i += 1
+			timersBefore[idRPI] = timersAfter[idRPI]
 
 		j+=1
-
-	#lengthBefore = len(finalList)
-
-	index2remove = []
-	for i in range(len(finalList)):
-
-		if 0 in finalList[i]:
-			index2remove.append(i)
-
-		for j in range(MAXID):
-			if np.isnan(finalList[i][j]):
-				index2remove.append(i)
-	#delete all list entries with index in index2remove
-	finalList = [ i for j, i in enumerate(finalList) if j not in index2remove]
-
-
 	lengthAfter = len(finalList)
 	#print(lengthBefore)
 	#print(lengthAfter)
-
-
 	return finalList
+
 X = []
 Y = []
 
