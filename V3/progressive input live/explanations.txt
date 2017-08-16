@@ -1,4 +1,0 @@
-1) Launch traininglive.py
-2) Wait for first training to happen
-3) Lauch live1.py
-4) enjoy
