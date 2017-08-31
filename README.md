@@ -10,6 +10,7 @@ The Server folder contains the necessary files and folders for the Raspberry Pis
 In all these scripts outdated data include :
 - location names: russia, fenetre_casque,...
 - IP addresses
+- Bluetooth addresses
 - database names
 
 Instructions :
