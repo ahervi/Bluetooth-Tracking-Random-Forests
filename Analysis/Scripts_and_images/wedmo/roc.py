@@ -318,9 +318,10 @@ Yshould = YuntouchedF
 clf4, YpredictionConsecutiveSignal4 = givesClassifier("4", DBS, XconsecutiveSignalCombinaisons, XconsecutiveSignal, YconsecutiveSignalCombinaisons, YconsecutiveSignal, XuntouchedF, YuntouchedF)
 
 
-taille = 1000
+taille = 10000
 maximum = 100
 for i in range(0,taille + 1):
+	print(i)
 	threshold = i*maximum/float(taille*100)
 	if threshold == 0:
 		threshold = -0.000000001
@@ -350,14 +351,14 @@ fig, axes1 = plt.subplots()
 
 axes = plt.gca()
 
-axes1.set_ylim([-0.1,1.1])
-axes1.set_xlim([-0.1,1.1])
+axes1.set_ylim([0.0,1.1])
+axes1.set_xlim([0.0,1.1])
 
-axes1.set_ylabel('True positive rate', color = 'black')
-axes1.plot(per,graphP, lw=1.5,color='black')
-line2, = axes1.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r', label='Luck', alpha=.8)
-line3, = axes1.plot([0, 0], [0, 1], lw=1.4, color='g', label='Perfect ROC curve', alpha=.8)
-line3, = axes1.plot([0, 1], [1, 1], lw=1.4, color='g', label='Perfect ROC curve', alpha=.8)
+axes1.set_ylabel('True positive rate',color='black')
+axes1.plot(per,graphP, lw=1.5, linestyle="-", color = "black")
+line2, = axes1.plot([0, 1], [0, 1],  lw=2, linestyle=':', color="black", label='Random classifier ROC curve', alpha=.8)
+line3, = axes1.plot([0, 0], [0, 1], lw=1.4, linestyle='--',color="black", label='Ideal ROC curve', alpha=.8)
+line3, = axes1.plot([0, 1], [1, 1], lw=1.4, linestyle='--',color="black", label='Ideal ROC curve', alpha=.8)
 
 plt.xlabel('False positive rate')
 axes1.legend(handles=[line2, line3], loc='bottom right')

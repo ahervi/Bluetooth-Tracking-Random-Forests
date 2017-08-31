@@ -12,23 +12,13 @@ import operator
 import itertools
 import math
 import datetime
-from matplotlib.font_manager import FontProperties
-import scipy as sp
-import scipy.stats
-def mean_confidence_interval(data, confidence=0.95):
-    a = 1.0*np.array(data)
-    n = len(a)
-    m, se = np.mean(a), scipy.stats.sem(a)
-    h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
-    return m, m-h, m+h
 
 def timeseparation(XconsecutiveSignalCombinaisons, minutes):
 	bufferRSSIS = []
 	newXconsecutiveSignalCombinaisons = []
 	oldTime = XconsecutiveSignalCombinaisons[0][1]
 	for v in range(len(XconsecutiveSignalCombinaisons)):
-
-		if XconsecutiveSignalCombinaisons[v][1] - oldTime > 60*minutes:
+		if XconsecutiveSignalCombinaisons[v][1] - oldTime > minutes*60:
 			oldTime = XconsecutiveSignalCombinaisons[v][1]
 			newXconsecutiveSignalCombinaisons.append(bufferRSSIS)
 			bufferRSSIS = []
@@ -82,12 +72,12 @@ def givesYshould(Y, j):
 	return Y[j]
 
 def givesClassifier(ID, DBS, XconsecutiveSignalCombinaisons, XconsecutiveSignal, YconsecutiveSignalCombinaisons, YconsecutiveSignal, sizeTest, j):
-	b = range(len(XconsecutiveSignal[j]))
+	b = range(len(XconsecutiveSignalCombinaisons[j]))
 
 	random.shuffle(b)
 
-	Xshuffled = [XconsecutiveSignal[j][i] for i in b] # or:
-	Yshuffled = [YconsecutiveSignal[j][i] for i in b] # or:
+	Xshuffled = [XconsecutiveSignalCombinaisons[j][i] for i in b] # or:
+	Yshuffled = [YconsecutiveSignalCombinaisons[j][i] for i in b] # or:
 
 	clf4 = RandomForestClassifier(n_estimators=100)
 
@@ -115,8 +105,8 @@ def givesClassifier(ID, DBS, XconsecutiveSignalCombinaisons, XconsecutiveSignal,
 	ratio4 = ratio4 / len(Yshould)
 	print("Similarity percentile : " + str(ratio4))
 	print(str(len(Yshould)- errors4) + " errors ( " + str(100-100*float(errors4)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(XconsecutiveSignal[j])) + " training samples (total " + str(len(YconsecutiveSignal)) +" ) : " + str(dicDB))
-	#with open("randomForestModel" + str(ID) ,"wb") as f:
-		#pickle.dump(clf4, f)
+	with open("randomForestModel" + str(ID) ,"wb") as f:
+		pickle.dump(clf4, f)
 	return clf4, YpredictionConsecutiveSignal4, Yshould
 
 
@@ -258,7 +248,7 @@ XconsecutiveSignal3 = []
 XconsecutiveSignal4 = []
 YconsecutiveSignal = []
 # CHANGE DB NAMES HERE
-DB_NAME = "WEDNESDAYWEEK4AFTERNOON"
+DB_NAME = "TUESDAYWEEK4AFTERNOON"
 
 DBS = [[DB_NAME, "C1:CF:31:F3:29:6C", "russia"], [DB_NAME, "C7:64:6C:03:B9:40", "me"], [DB_NAME, "DA:E7:8C:CA:05:CF", "fenetre_casque"], [DB_NAME, "F2:39:F2:6A:80:89", "fenetre_russia"], [DB_NAME, "C7:62:97:12:1E:35", "the"], [DB_NAME, "E4:FA:6E:AF:58:19", "carte_bancaire"]]
 for name in DBS:
@@ -306,26 +296,14 @@ XconsecutiveSignal4.sort(key=lambda x: x[1])
 YconsecutiveSignalCombinaisonsTemp.sort(key=lambda x: x[1])
 YconsecutiveSignalTemp.sort(key=lambda x: x[1])
 
-
-
 minutes = 15
-graph = []
-graph1 = []
-graph2 = []
-graph3 = []
-graph4 = []
 
-per = []
-meanLocale = 0
-meanLocale1 = 0
-meanLocale2 = 0
-meanLocale3 = 0
-meanLocale4 = 0
 XpartialC = timeseparation(XconsecutiveSignalCombinaisons, minutes)
 Xpartial1C = timeseparation(XconsecutiveSignalCombinaisons1, minutes)
 Xpartial2C = timeseparation(XconsecutiveSignalCombinaisons2, minutes)
 Xpartial3C = timeseparation(XconsecutiveSignalCombinaisons3, minutes)
 Xpartial4C = timeseparation(XconsecutiveSignalCombinaisons4, minutes)
+XconsecutiveSignalCombinaisons4 = timeseparation(XconsecutiveSignalCombinaisons4, minutes)
 Xpartial = timeseparation(XconsecutiveSignal, minutes)
 Xpartial1 = timeseparation(XconsecutiveSignal1, minutes)
 Xpartial2 = timeseparation(XconsecutiveSignal2, minutes)
@@ -334,207 +312,111 @@ Xpartial4 = timeseparation(XconsecutiveSignal4, minutes)
 YpartialC = timeseparation(YconsecutiveSignalCombinaisonsTemp, minutes)
 Ypartial = timeseparation(YconsecutiveSignalTemp, minutes)
 
-NumberOfSample = 1000
 
-if len(Xpartial) > 2:
-	for o in range(NumberOfSample):
-		print("PROGRESS: " + str(o))
-		per = []
-		for j in range(len(Xpartial) - 2):
+for j in range(len(Xpartial) - 1):
+	sizeTest = 1
+	clf3_1, YpredictionConsecutiveSignal3_1, Yshould  = givesClassifier("3_1", DBS, Xpartial1C, Xpartial1, YpartialC, Ypartial, sizeTest, j)
+	clf3_2, YpredictionConsecutiveSignal3_2, Yshould  = givesClassifier("3_2", DBS, Xpartial2C, Xpartial2, YpartialC, Ypartial, sizeTest, j)
+	clf3_3, YpredictionConsecutiveSignal3_3, Yshould  = givesClassifier("3_3", DBS, Xpartial3C, Xpartial3, YpartialC, Ypartial, sizeTest, j)
+	clf3_4, YpredictionConsecutiveSignal3_4, Yshould  = givesClassifier("3_4", DBS, Xpartial4C, Xpartial4, YpartialC, Ypartial, sizeTest, j)
+	clf4, YpredictionConsecutiveSignal4, Yshould = givesClassifier("4", DBS, XpartialC, Xpartial, YpartialC, Ypartial, sizeTest, j)
+	Yshould = givesYshould(Ypartial, j+1)
 
-			sizeTest = 1
-			clf3_1, YpredictionConsecutiveSignal3_1, Yshould  = givesClassifier("3_1", DBS, Xpartial1C, Xpartial1, YpartialC, Ypartial, sizeTest, j)
-			clf3_2, YpredictionConsecutiveSignal3_2, Yshould  = givesClassifier("3_2", DBS, Xpartial2C, Xpartial2, YpartialC, Ypartial, sizeTest, j)
-			clf3_3, YpredictionConsecutiveSignal3_3, Yshould  = givesClassifier("3_3", DBS, Xpartial3C, Xpartial3, YpartialC, Ypartial, sizeTest, j)
-			clf3_4, YpredictionConsecutiveSignal3_4, Yshould  = givesClassifier("3_4", DBS, Xpartial4C, Xpartial4, YpartialC, Ypartial, sizeTest, j)
-			clf4, YpredictionConsecutiveSignal4, Yshould = givesClassifier("4", DBS, XpartialC, Xpartial, YpartialC, Ypartial, sizeTest, j)
-			Yshould = givesYshould(Ypartial, j+1)
+	YpredictionConsecutiveSignal4 = clf4.predict(Xpartial[j + 1])
+	print("FINAL RESULTS")
 
-			YpredictionConsecutiveSignal4 = clf4.predict(Xpartial[j + 1])
-			print("FINAL RESULTS")
-
-			ratio = 0
-			rangeL = len(YpredictionConsecutiveSignal4)
-			if rangeL > len(Yshould):
-				rangeL = len(Yshould)
+	ratio = 0
+	rangeL = len(YpredictionConsecutiveSignal4)
+	if rangeL > len(Yshould):
+		rangeL = len(Yshould)
 
 
-			for k in range(rangeL):
-				proba = {'me':0, 'russia':0, 'the':0, 'fenetre_casque':0, 'fenetre_russia':0, 'carte_bancaire':0}
-				pos = str(YpredictionConsecutiveSignal4[k])
-				if pos == Yshould[k]:
-					ratio += 1
-			errors = ratio
-			ratio = float(ratio)
-			ratio = ratio / len(Yshould)
-			meanLocale = ratio
+	for k in range(rangeL):
+		proba = {'me':0, 'russia':0, 'the':0, 'fenetre_casque':0, 'fenetre_russia':0, 'carte_bancaire':0}
+		pos = str(YpredictionConsecutiveSignal4[k])
+		if pos == Yshould[k]:
+			ratio += 1
+	errors = ratio
+	ratio = float(ratio)
+	ratio = ratio / len(Yshould)
 
-			#print("Similarity percentile : " + str(ratio))
-			#print(str(len(Yshould)- errors) + " errors ( " + str(100-100*float(errors)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(X[:limitTestSample])) + " training samples (total " + str(len(Y)) +" ) : " + str(dicDB))
-			print("Ratio with only 4model " + str((1-ratio)*100))
-			YpredictionConsecutiveSignal3_1 = clf3_1.predict(Xpartial1[j + 1])
-			YpredictionConsecutiveSignal3_2 = clf3_2.predict(Xpartial2[j + 1])
-			YpredictionConsecutiveSignal3_3 = clf3_3.predict(Xpartial3[j + 1])
-			YpredictionConsecutiveSignal3_4 = clf3_4.predict(Xpartial4[j + 1])
+	#print("Similarity percentile : " + str(ratio))
+	#print(str(len(Yshould)- errors) + " errors ( " + str(100-100*float(errors)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(X[:limitTestSample])) + " training samples (total " + str(len(Y)) +" ) : " + str(dicDB))
+	print("Ratio with only 4model " + str((1-ratio)*100))
+	YpredictionConsecutiveSignal4 = clf4.predict(Xpartial[j + 1])
+	YpredictionConsecutiveSignal3_1 = clf3_1.predict(Xpartial1[j + 1])
+	YpredictionConsecutiveSignal3_2 = clf3_2.predict(Xpartial2[j + 1])
+	YpredictionConsecutiveSignal3_3 = clf3_3.predict(Xpartial3[j + 1])
+	YpredictionConsecutiveSignal3_4 = clf3_4.predict(Xpartial4[j + 1])
 
-		 	ratio = 0
-			rangeL = len(YpredictionConsecutiveSignal4)
-			if rangeL > len(Yshould):
-				rangeL = len(Yshould)
-
-
-			for k in range(rangeL):
-				proba = {'me':0, 'russia':0, 'the':0, 'fenetre_casque':0, 'fenetre_russia':0, 'carte_bancaire':0}
-				pos4 = str(YpredictionConsecutiveSignal4[k])
-				pos3_1 = str(YpredictionConsecutiveSignal3_1[k])
-				pos3_2 = str(YpredictionConsecutiveSignal3_2[k])
-				pos3_3 = str(YpredictionConsecutiveSignal3_3[k])
-				pos3_4 = str(YpredictionConsecutiveSignal3_4[k])
-				proba[pos4] += 0
-				proba[pos3_1] += 1
-				proba[pos3_2] += 1
-				proba[pos3_3] += 1
-				proba[pos3_4] += 1
-				pos = max(proba.iteritems(), key=operator.itemgetter(1))[0]
-				if pos == Yshould[k]:
-					ratio += 1
-			errors = ratio
-			ratio = float(ratio)
-			ratio = ratio / len(Yshould)
-			meanLocale1 = ratio
-
-			#print("Similarity percentile : " + str(ratio))
-			#print(str(len(Yshould)- errors) + " errors ( " + str(100-100*float(errors)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(X[:limitTestSample])) + " training samples (total " + str(len(Y)) +" ) : " + str(dicDB))
-			print("Ratio with 4model vote at 0 " + str((1-ratio)*100))
-
-			#TODO : AVANT L'ENTRAINEMENT ORDONNER LES LISTES Xpartial et Ypartial PAR TIMESTAMP PLUTOT QUE PAR PLACES -> ENFER MAIS IL FAUT BIEN
-			#		LA SUITE DU CODE LOL
+	for l in range(2):
+	 	ratio = 0
+		rangeL = len(YpredictionConsecutiveSignal4)
+		if rangeL > len(Yshould):
+			rangeL = len(Yshould)
 
 
+		for k in range(rangeL):
+			proba = {'me':0, 'russia':0, 'the':0, 'fenetre_casque':0, 'fenetre_russia':0, 'carte_bancaire':0}
+			pos4 = str(YpredictionConsecutiveSignal4[k])
+			pos3_1 = str(YpredictionConsecutiveSignal3_1[k])
+			pos3_2 = str(YpredictionConsecutiveSignal3_2[k])
+			pos3_3 = str(YpredictionConsecutiveSignal3_3[k])
+			pos3_4 = str(YpredictionConsecutiveSignal3_4[k])
+			proba[pos4] += l
+			proba[pos3_1] += 1
+			proba[pos3_2] += 1
+			proba[pos3_3] += 1
+			proba[pos3_4] += 1
+			pos = max(proba.iteritems(), key=operator.itemgetter(1))[0]
+			if pos == Yshould[k]:
+				ratio += 1
+		errors = ratio
+		ratio = float(ratio)
+		ratio = ratio / len(Yshould)
 
-			ratio = 0
-			rangeL = len(YpredictionConsecutiveSignal4)
-			if rangeL > len(Yshould):
-				rangeL = len(Yshould)
+		#print("Similarity percentile : " + str(ratio))
+		#print(str(len(Yshould)- errors) + " errors ( " + str(100-100*float(errors)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(X[:limitTestSample])) + " training samples (total " + str(len(Y)) +" ) : " + str(dicDB))
+		print("Ratio with 4model vote at " + str(l)+ " " + str((1-ratio)*100))
 
+		#TODO : AVANT L'ENTRAINEMENT ORDONNER LES LISTES Xpartial et Ypartial PAR TIMESTAMP PLUTOT QUE PAR PLACES -> ENFER MAIS IL FAUT BIEN
+		#		LA SUITE DU CODE LOL
+	YpredictionConsecutiveSignal = probabilityPredictionMainAndSub(sizeTest, clf4, clf3_1, clf3_2, clf3_3, clf3_3, Xpartial, Xpartial1, Xpartial2, Xpartial3, Xpartial4, j+1)
+ 	ratio = 0
 
-			for k in range(rangeL):
-				proba = {'me':0, 'russia':0, 'the':0, 'fenetre_casque':0, 'fenetre_russia':0, 'carte_bancaire':0}
-				pos4 = str(YpredictionConsecutiveSignal4[k])
-				pos3_1 = str(YpredictionConsecutiveSignal3_1[k])
-				pos3_2 = str(YpredictionConsecutiveSignal3_2[k])
-				pos3_3 = str(YpredictionConsecutiveSignal3_3[k])
-				pos3_4 = str(YpredictionConsecutiveSignal3_4[k])
-				proba[pos4] += 1
-				proba[pos3_1] += 1
-				proba[pos3_2] += 1
-				proba[pos3_3] += 1
-				proba[pos3_4] += 1
-				pos = max(proba.iteritems(), key=operator.itemgetter(1))[0]
-				if pos == Yshould[k]:
-					ratio += 1
-			errors = ratio
-			ratio = float(ratio)
-			ratio = ratio / len(Yshould)
-			meanLocale2 = ratio
-
-			#print("Similarity percentile : " + str(ratio))
-			#print(str(len(Yshould)- errors) + " errors ( " + str(100-100*float(errors)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(X[:limitTestSample])) + " training samples (total " + str(len(Y)) +" ) : " + str(dicDB))
-			print("Ratio with 4model vote at 1"  + " " + str((1-ratio)*100))
-
-			#TODO : AVANT L'ENTRAINEMENT ORDONNER LES LISTES Xpartial et Ypartial PAR TIMESTAMP PLUTOT QUE PAR PLACES -> ENFER MAIS IL FAUT BIEN
-			#		LA SUITE DU CODE LOL
+	rangeL = len(YpredictionConsecutiveSignal)
+	if rangeL > len(Yshould):
+		rangeL = len(Yshould)
 
 
+	for k in range(rangeL):
+		if YpredictionConsecutiveSignal[k] == Yshould[k]:
+			ratio += 1
+	errors = ratio
+	ratio = float(ratio)
+	ratio = ratio / len(Yshould)
 
-			YpredictionConsecutiveSignal = probabilityPredictionMainAndSub(sizeTest, clf4, clf3_1, clf3_2, clf3_3, clf3_3, Xpartial, Xpartial1, Xpartial2, Xpartial3, Xpartial4, j+1)
-		 	ratio = 0
+		#print("Similarity percentile : " + str(ratio))
+		#print(str(len(Yshould)- errors) + " errors ( " + str(100-100*float(errors)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(X[:limitTestSample])) + " training samples (total " + str(len(Y)) +" ) : " + str(dicDB))
+	print("Ratio M + S proba " + str((1-ratio)*100))
+	
+	YpredictionConsecutiveSignal = probabilityPredictionSub(sizeTest, clf3_1, clf3_2, clf3_3, clf3_3, Xpartial1, Xpartial2, Xpartial3, Xpartial4, j+1)
+ 	ratio = 0
 
-			rangeL = len(YpredictionConsecutiveSignal)
-			if rangeL > len(Yshould):
-				rangeL = len(Yshould)
-
-
-			for k in range(rangeL):
-				if YpredictionConsecutiveSignal[k] == Yshould[k]:
-					ratio += 1
-			errors = ratio
-			ratio = float(ratio)
-			ratio = ratio / len(Yshould)
-			meanLocale3 = ratio
-
-				#print("Similarity percentile : " + str(ratio))
-				#print(str(len(Yshould)- errors) + " errors ( " + str(100-100*float(errors)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(X[:limitTestSample])) + " training samples (total " + str(len(Y)) +" ) : " + str(dicDB))
-			print("Ratio M + S proba " + str((1-ratio)*100))
-			
-			YpredictionConsecutiveSignal = probabilityPredictionSub(sizeTest, clf3_1, clf3_2, clf3_3, clf3_3, Xpartial1, Xpartial2, Xpartial3, Xpartial4, j+1)
-		 	ratio = 0
-
-			rangeL = len(YpredictionConsecutiveSignal)
-			if rangeL > len(Yshould):
-				rangeL = len(Yshould)
+	rangeL = len(YpredictionConsecutiveSignal)
+	if rangeL > len(Yshould):
+		rangeL = len(Yshould)
 
 
-			for k in range(rangeL):
-				if YpredictionConsecutiveSignal[k] == Yshould[k]:
-					ratio += 1
-			errors = ratio
-			ratio = float(ratio)
-			ratio = ratio / len(Yshould)
-			meanLocale4 = ratio
-				#print("Similarity percentile : " + str(ratio))
-				#print(str(len(Yshould)- errors) + " errors ( " + str(100-100*float(errors)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(X[:limitTestSample])) + " training samples (total " + str(len(Y)) +" ) : " + str(dicDB))
-			print("Ratio proba S " + str((1-ratio)*100))
-			if len(Xpartial) - 2 != 0:
-				per.append(j)
+	for k in range(rangeL):
+		if YpredictionConsecutiveSignal[k] == Yshould[k]:
+			ratio += 1
+	errors = ratio
+	ratio = float(ratio)
+	ratio = ratio / len(Yshould)
 
+		#print("Similarity percentile : " + str(ratio))
+		#print(str(len(Yshould)- errors) + " errors ( " + str(100-100*float(errors)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(X[:limitTestSample])) + " training samples (total " + str(len(Y)) +" ) : " + str(dicDB))
+	print("Ratio proba S " + str((1-ratio)*100))
 
-				graph4.append(100-100*meanLocale4)
-				graph.append(100-100*meanLocale)
-				graph1.append(100-100*meanLocale1)
-				graph2.append(100-100*meanLocale2)
-				graph3.append(100-100*meanLocale3)
-
-
-print("Main")
-print(np.mean(graph))
-print(np.std(graph))
-print(mean_confidence_interval(graph))
-print(mean_confidence_interval(graph, 0.99))
-print(mean_confidence_interval(graph, 0.999))
-print(mean_confidence_interval(graph, 0.9999))
-
-
-print("Submodels (det)")
-print(np.mean(graph1))
-print(np.std(graph1))
-print(mean_confidence_interval(graph1))
-print(mean_confidence_interval(graph1, 0.99))
-print(mean_confidence_interval(graph1, 0.999))
-print(mean_confidence_interval(graph1, 0.9999))
-
-print("Submodels + Main (det)")
-print(np.mean(graph2))
-print(np.std(graph2))
-print(mean_confidence_interval(graph2))
-print(mean_confidence_interval(graph2, 0.99))
-print(mean_confidence_interval(graph2, 0.999))
-print(mean_confidence_interval(graph2, 0.9999))
-
-print("Submodels + Main (proba)")
-print(np.mean(graph3))
-print(np.std(graph3))
-print(mean_confidence_interval(graph3))
-print(mean_confidence_interval(graph3, 0.99))
-print(mean_confidence_interval(graph3, 0.999))
-print(mean_confidence_interval(graph3, 0.9999))
-
-print("Submodels (proba)")
-print(np.mean(graph4))
-print(np.std(graph4))
-print(mean_confidence_interval(graph4))
-print(mean_confidence_interval(graph4, 0.99))
-print(mean_confidence_interval(graph4, 0.999))
-print(mean_confidence_interval(graph4, 0.9999))
-
-print("minutes : " + str(minutes))
+	

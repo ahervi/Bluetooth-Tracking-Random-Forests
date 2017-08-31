@@ -206,7 +206,7 @@ def givesList(DB_NAME, BSSID, size):
 
 DB_NAME = "2t4pv2"
 
-DBS_PRED= [[DB_NAME, "F2:39:F2:6A:80:89", "me"], [DB_NAME, "C7:62:97:12:1E:35", "russia"]]
+DBS_PRED= [[DB_NAME, "F2:39:F2:6A:80:89", "me"], [DB_NAME, "C7:62:97:12:1E:35", "russia"], [DB_NAME, "E4:FA:6E:AF:58:19", "me"], [DB_NAME, "DA:E7:8C:CA:05:CF", "russia"]]
 DBS = [[DB_NAME, "C1:CF:31:F3:29:6C", "russia"], [DB_NAME, "C7:64:6C:03:B9:40", "me"]]
 XuntouchedF4 = []
 

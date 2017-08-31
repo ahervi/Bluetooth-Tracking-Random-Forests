@@ -419,7 +419,6 @@ plt.plot(per,graph)
 #plt.plot(per,graph3)
 #plt.plot(per,graph4)
 
-plt.legend(['Main'], loc='upper right')
 plt.ylabel('% of errors on prediction sample')
 plt.xlabel('% of samples used for training')
 plt.savefig("main.png")

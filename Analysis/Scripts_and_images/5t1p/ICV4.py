@@ -13,16 +13,7 @@ import itertools
 import math
 import datetime
 import scipy as sp
-from itertools import cycle
-
 import scipy.stats
-def mean_confidence_interval(data, confidence=0.95):
-    a = 1.0*np.array(data)
-    n = len(a)
-    m, se = np.mean(a), scipy.stats.sem(a)
-    h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
-    return m, m-h, m+h
-
 #size test does not vary with size
 def rssiWithHumidity(timestamp, rssi):
 	res = math.cos((2*math.pi*float(timestamp2hour(timestamp))-1)/24)
@@ -32,31 +23,24 @@ def rssiWithHumidity(timestamp, rssi):
 def timestamp2hour(timestamp):
 	return int(datetime.datetime.fromtimestamp(int(timestamp)).strftime('%H'))
 
-def probabilityPredictionMain(clf4, X, XuntouchedF, threshold):
+def probabilityPredictionMainAndSub(sizeTest, clf4, clf3_1, clf3_2, clf3_3, clf3_4, X, X1, X2, X3, X4, XuntouchedF,XuntouchedF1,XuntouchedF2,XuntouchedF3,XuntouchedF4, YuntouchedF):
 	YpredictionConsecutiveSignal = []
-	
+	probas3_1 = clf3_1.predict_proba(XuntouchedF1)
+	probas3_2 = clf3_2.predict_proba(XuntouchedF2)
+	probas3_3 = clf3_3.predict_proba(XuntouchedF3)
+	probas3_4 = clf3_4.predict_proba(XuntouchedF4)
+
 	probas4 = clf4.predict_proba(XuntouchedF)
 
 	places = ['carte_bancaire', 'fenetre_casque', 'fenetre_russia', 'me', 'russia', 'the']
 
-	for i in range(len(probas4)):
+	for i in range(len(probas3_1)):
 
-		probas = [probas4[i][j] for j in range(len(probas4[i]))]
+		probas = [probas4[i][j]+probas3_1[i][j]+probas3_2[i][j]+probas3_3[i][j]+probas3_4[i][j] for j in range(len(probas3_1[i]))]
 		maxIndex = max(enumerate(probas),key=lambda x: x[1])[0]
-		toAppend = [0]*len(probas)
-		for j in range(len(probas)):
-			if probas[j] > threshold:
-				toAppend[j] = 1
-		
-		YpredictionConsecutiveSignal.append(toAppend)
+		YpredictionConsecutiveSignal.append(places[maxIndex])
 
 	return YpredictionConsecutiveSignal
-def placesToIndex(place):
-	places = ['carte_bancaire', 'fenetre_casque', 'fenetre_russia', 'me', 'russia', 'the']
-	for i in range(len(places)):
-		if(places[i] == place):
-			k = i
-	return k
 
 def probabilityPredictionSub(sizeTest, clf3_1, clf3_2, clf3_3, clf3_4, X1, X2, X3, X4, XuntouchedF,XuntouchedF1,XuntouchedF2,XuntouchedF3,XuntouchedF4, YuntouchedF):
 	YpredictionConsecutiveSignal = []
@@ -74,10 +58,12 @@ def probabilityPredictionSub(sizeTest, clf3_1, clf3_2, clf3_3, clf3_4, X1, X2, X
 
 	return YpredictionConsecutiveSignal
 	
-def givesClassifier(ID, DBS, XconsecutiveSignalCombinaisons, XconsecutiveSignal, YconsecutiveSignalCombinaisons, YconsecutiveSignal, XuntouchedF, YuntouchedF):
+def givesClassifier(ID, DBS, XconsecutiveSignalCombinaisons, XconsecutiveSignal, YconsecutiveSignalCombinaisons, YconsecutiveSignal, sizeTest, XuntouchedF, YuntouchedF):
 	clf4 = RandomForestClassifier(n_estimators=100)
 
-	clf4 = clf4.fit(XconsecutiveSignal, YconsecutiveSignal)
+	limitTestSampleCombi = int(math.floor(int(len(XconsecutiveSignal)*sizeTest)))
+	limitTestSampleFinal = int(math.floor(int(len(XconsecutiveSignal)*sizeTest)))
+	clf4 = clf4.fit(XconsecutiveSignal[:limitTestSampleCombi], YconsecutiveSignal[:limitTestSampleCombi])
 
 
 	YpredictionConsecutiveSignal4 = clf4.predict(XuntouchedF)
@@ -97,11 +83,16 @@ def givesClassifier(ID, DBS, XconsecutiveSignalCombinaisons, XconsecutiveSignal,
 
 	ratio4 = ratio4 / len(Yshould)
 	print("Similarity percentile : " + str(ratio4))
-	print(str(len(Yshould)- errors4) + " errors ( " + str(100-100*float(errors4)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(XconsecutiveSignal)) + " training samples : " + str(dicDB))
+	print("size " + str(sizeTest) + str(len(Yshould)- errors4) + " errors ( " + str(100-100*float(errors4)/len(Yshould))+ "% ) on " + str(len(Yshould)) + " predicted samples out of " + str(len(XconsecutiveSignal)) + " training samples : " + str(dicDB))
 	#with open("randomForestModel" + str(ID) ,"wb") as f:
 		#pickle.dump(clf4, f)
 	return clf4, YpredictionConsecutiveSignal4
-
+def mean_confidence_interval(data, confidence=0.95):
+    a = 1.0*np.array(data)
+    n = len(a)
+    m, se = np.mean(a), scipy.stats.sem(a)
+    h = se * sp.stats.t._ppf((1+confidence)/2., n-1)
+    return m, m-h, m+h
 def givesTriList(list):
 	res1 = []
 	res2 = []
@@ -233,11 +224,15 @@ def givesList(DB_NAME, BSSID, size):
 		consecutiveSignal.insert(0, extractedSignalsList1)
 		ultiList.extend(consecutiveSignal)
 	return [ultiList, givesTriList(ultiList), consecutiveSignalsList, givesTriList(consecutiveSignalsList), Xuntouched, givesTriList(Xuntouched)]
-DB_NAME = "WEDNESDAYWEEK4AFTERNOON"
+DB_NAME = "5t1pV8"
 
-DBS = [[DB_NAME, "C1:CF:31:F3:29:6C", "russia"], [DB_NAME, "C7:64:6C:03:B9:40", "me"], [DB_NAME, "DA:E7:8C:CA:05:CF", "fenetre_casque"], [DB_NAME, "F2:39:F2:6A:80:89", "fenetre_russia"], [DB_NAME, "C7:62:97:12:1E:35", "the"], [DB_NAME, "E4:FA:6E:AF:58:19", "carte_bancaire"]]
+DBS = [[DB_NAME, "C1:CF:31:F3:29:6C", "russia"], [DB_NAME, "F2:39:F2:6A:80:89", "me"], [DB_NAME, "DA:E7:8C:CA:05:CF", "fenetre_casque"], [DB_NAME, "C7:62:97:12:1E:35", "fenetre_russia"], [DB_NAME, "E4:FA:6E:AF:58:19", "carte_bancaire"]]
 XuntouchedF4 = []
-# C
+# CHANGE DB NAMES HERE
+
+graph = []
+per = []
+graph1 = []
 graph2 = []
 graph3 = []
 graph4 = []
@@ -315,246 +310,163 @@ XconsecutiveSignal3 = [XconsecutiveSignal3[i] for i in b] # or:
 XconsecutiveSignal4 = [XconsecutiveSignal4[i] for i in b] # or:
 
 YconsecutiveSignal = [YconsecutiveSignal[i] for i in b] # or:
-NumberOfClf = 100
 
-per = []
-graphN = [[] for i in range(NumberOfClf)]
-graphPN = [[] for i in range(NumberOfClf)]
-graphP = [[] for i in range(NumberOfClf)]
-graphNN = [[] for i in range(NumberOfClf)]
-thresholds = [[] for i in range(NumberOfClf)]
-Youdi = [[] for i in range(NumberOfClf)]
-Equal = [[] for i in range(NumberOfClf)]
-EqualN = [[] for i in range(NumberOfClf)]
-for j in range(NumberOfClf):
-	print("We are at " + str(j) + " out of " + str(NumberOfClf))
+
+
 	
+for i in range(1000):
+	print(str(i) + "HEEERE")
+	sizeTest = 0.999
+	per.append(sizeTest*100)
 	Yshould = YuntouchedF
-	clf4, YpredictionConsecutiveSignal4 = givesClassifier("4", DBS, XconsecutiveSignalCombinaisons, XconsecutiveSignal, YconsecutiveSignalCombinaisons, YconsecutiveSignal, XuntouchedF, YuntouchedF)
-
-
-	taille = 1000
-	maximum = 100
-	for i in range(0,taille + 1):
-		threshold = i*maximum/float(taille*100)
-		per.append(threshold)
-		YpredictionConsecutiveSignal = probabilityPredictionMain(clf4, XconsecutiveSignal, XuntouchedF, threshold)
-	 	falseNegative = 0
-	 	falsePositive = 0
-		for k in range(len(YpredictionConsecutiveSignal)):
-
-			if YpredictionConsecutiveSignal[k][placesToIndex(YuntouchedF[k])] == 0 :
-				falseNegative += 1
-				#ratio += float(len(YpredictionConsecutiveSignal[k]))/(len(DBS)-1)
-				#ratio += 1
-			for l in range(len(YpredictionConsecutiveSignal[k])):
-				if YpredictionConsecutiveSignal[k][l] == 1 and placesToIndex(YuntouchedF[k]) != l:
-					falsePositive += 1
-		falseNegativeNumber = falseNegative
-		falsePositiveNumber = falsePositive
-		falsePositive = float(falsePositive) / (len(YpredictionConsecutiveSignal)*(len(YpredictionConsecutiveSignal[0])-1))
-		falseNegative = float(falseNegative) / len(YpredictionConsecutiveSignal)
-		#graph3.append(100-100*float(errors)/len(YpredictionConsecutiveSignal))
-		graphP[j].append(falsePositive)
-		graphN[j].append(falseNegative)
-		graphPN[j].append(falsePositiveNumber)
-		graphNN[j].append(falseNegativeNumber)
-		Youdi[j].append(1-falseNegative-falsePositive)
-		Equal[j].append(abs(falseNegative-falsePositive))
-		EqualN[j].append(abs(falseNegativeNumber-falsePositiveNumber))
-		thresholds[j].append(threshold)
-		#print(100*(float(i)/maximum))
-		#print(100*float(errors)/len(YpredictionConsecutiveSignal))
-		print(100*i/float(taille))
-thresholdsY = []
-thresholdsE = []
-thresholdsEN = []
-for i in range(NumberOfClf):
-	maxIndexY = max(enumerate(Youdi[i]),key=lambda x: x[1])[0]
-	maxIndexE = min(enumerate(Equal[i]),key=lambda x: x[1])[0]
-	maxIndexEN = min(enumerate(EqualN[i]),key=lambda x: x[1])[0]
-
-	thresholdsY.append(thresholds[i][maxIndexY]) 
-	thresholdsE.append(thresholds[i][maxIndexE]) 
-	thresholdsEN.append(thresholds[i][maxIndexEN]) 
-
-graphP = [sum(x)/float(NumberOfClf) for x in zip(*graphP)]
-per = per[:taille+1]
-print(len(graphP))
-print(len(per))
-graphN = [sum(x)/float(NumberOfClf) for x in zip(*graphN)]
-graphPN = [sum(x)/float(NumberOfClf) for x in zip(*graphPN)]
-Youdi = [sum(x)/float(NumberOfClf) for x in zip(*Youdi)]
-graphNN = [sum(x)/float(NumberOfClf) for x in zip(*graphNN)]
-
-
-
-print("Youden threshold")
-print(np.mean(thresholdsY))
-print(np.std(thresholdsY))
-print(mean_confidence_interval(thresholdsY))
-print(mean_confidence_interval(thresholdsY, 0.99))
-print(mean_confidence_interval(thresholdsY, 0.999))
-print(mean_confidence_interval(thresholdsY, 0.9999))
-
-
-
-print("Equal rates threshold")
-print(np.mean(thresholdsE))
-print(np.std(thresholdsE))
-print(mean_confidence_interval(thresholdsE))
-print(mean_confidence_interval(thresholdsE, 0.99))
-print(mean_confidence_interval(thresholdsE, 0.999))
-print(mean_confidence_interval(thresholdsE, 0.9999))
-
-
-print("Equal Number threshold")
-print(np.mean(thresholdsEN))
-print(np.std(thresholdsEN))
-print(mean_confidence_interval(thresholdsEN))
-print(mean_confidence_interval(thresholdsEN, 0.99))
-print(mean_confidence_interval(thresholdsEN, 0.999))
-print(mean_confidence_interval(thresholdsEN, 0.9999))
-
-fig, axes1 = plt.subplots() 
-
-plt.gca().set_color_cycle(['black', 'green', 'blue', 'red', 'orange'])
-axes = plt.gca()
-
-axes1.set_ylabel("Youden's index", color = 'black')
-axes1.plot(per,Youdi,color='black')
-
-
-axes1.set_xlabel('threshold')
-plt.savefig("youdenIndexMain.png")
-
-plt.show()
-
-plt.clf()
-plt.close()
-
-
-
-fig, axes1 = plt.subplots() 
-axes2 = axes1.twinx()
-
-plt.gca().set_color_cycle(['black', 'green', 'blue', 'red', 'orange'])
-axes = plt.gca()
-
-
-axes1.set_ylim([0,0.06])
-axes2.set_ylim([0,0.06])
-axes1.set_ylabel('false negative rate', color = 'black')
-axes1.plot(per,graphN,color='black')
-
-axes2.plot(per,graphP,color = 'green')
-
-axes2.set_ylabel('false positive rate', color = 'green')
-axes1.set_xlabel('threshold')
-
-plt.savefig("bothMainZoom.png")
-plt.show()
-plt.clf()
-plt.close()
-
-fig, axes1 = plt.subplots() 
-axes2 = axes1.twinx()
-
-plt.gca().set_color_cycle(['black', 'green', 'blue', 'red', 'orange'])
-axes = plt.gca()
-
-
-
-axes1.set_ylabel('false negative rate', color = 'black')
-axes1.plot(per,graphN,color='black')
-
-axes2.plot(per,graphP,color = 'green')
-
-axes2.set_ylabel('false positive rate', color = 'green')
-axes1.set_xlabel('threshold')
-
-plt.savefig("bothMain.png")
-plt.show()
-plt.clf()
-plt.close()
-
-
-
-fig, axes1 = plt.subplots() 
-axes2 = axes1.twinx()
-plt.gca().set_color_cycle(['black', 'green', 'blue', 'red', 'orange'])
-axes = plt.gca()
-
-
-
-axes1.set_ylim([0,1000])
-axes2.set_ylim([0,1000])
-axes1.set_ylabel('false negative', color = 'black')
-axes1.plot(per,graphNN,color='black')
-
-axes2.plot(per,graphPN,color = 'green')
-
-
-axes2.set_ylabel('false positive', color = 'green')
-axes1.set_xlabel('threshold')
-plt.savefig("bothNumberMainZoom.png")
-plt.show()
-
-plt.clf()
-plt.close()
-
-
-fig, axes1 = plt.subplots() 
-plt.gca().set_color_cycle(['black', 'green', 'blue', 'red', 'orange'])
-axes = plt.gca()
-
-
-
-axes1.set_ylim([0,1000])
-
-line1, = axes1.plot(per,graphNN, "k-", label="Number of false negative")
-
-line2, = axes1.plot(per,graphPN, "k--", label="Number of false positive")
-axes1.legend(handles=[line1, line2], loc='bottom right')
-
-
-axes1.set_xlabel('threshold')
-plt.savefig("bothNumberMain.png")
-plt.show()
-
-plt.clf()
-plt.close()
-
-
-
-fig, axes1 = plt.subplots() 
-axes2 = axes1.twinx()
-plt.gca().set_color_cycle(['black', 'green', 'blue', 'red', 'orange'])
-axes = plt.gca()
-
-
-
-axes1.set_ylabel('false negative', color = 'black')
-axes1.plot(per,graphNN,color='black')
-
-
-
-axes1.set_xlabel('threshold')
-plt.savefig("falsenegMain.png")
-plt.show()
-plt.clf()
-plt.close()
-fig, axes1 = plt.subplots() 
-plt.gca().set_color_cycle(['black', 'green', 'blue', 'red', 'orange'])
-axes = plt.gca()
-
-
-
-axes1.plot(per,graphPN,color = 'green')
-
-
-axes1.set_ylabel('false positive', color = 'green')
-axes1.set_xlabel('threshold')
-plt.savefig("falseposMain.png")
-plt.show()
-
+	clf4, YpredictionConsecutiveSignal4 = givesClassifier("4", DBS, XconsecutiveSignalCombinaisons, XconsecutiveSignal, YconsecutiveSignalCombinaisons, YconsecutiveSignal, sizeTest, XuntouchedF, YuntouchedF)
+	# clf3_1, YpredictionConsecutiveSignal3_1 = givesClassifier("3_1", DBS, XconsecutiveSignalCombinaisons1, XconsecutiveSignal1, YconsecutiveSignalCombinaisons, YconsecutiveSignal, sizeTest, XuntouchedF1, YuntouchedF)
+	# clf3_2, YpredictionConsecutiveSignal3_2 = givesClassifier("3_2", DBS, XconsecutiveSignalCombinaisons2, XconsecutiveSignal2, YconsecutiveSignalCombinaisons, YconsecutiveSignal, sizeTest, XuntouchedF2, YuntouchedF)
+	# clf3_3, YpredictionConsecutiveSignal3_3 = givesClassifier("3_3", DBS, XconsecutiveSignalCombinaisons3, XconsecutiveSignal3, YconsecutiveSignalCombinaisons, YconsecutiveSignal, sizeTest, XuntouchedF3, YuntouchedF)
+	# clf3_4, YpredictionConsecutiveSignal3_4 = givesClassifier("3_4", DBS, XconsecutiveSignalCombinaisons4, XconsecutiveSignal4, YconsecutiveSignalCombinaisons, YconsecutiveSignal, sizeTest, XuntouchedF4, YuntouchedF)
+
+
+
+	
+ 	ratio = 0
+	for k in range(len(YpredictionConsecutiveSignal4)):
+		proba = {'me':0, 'russia':0, 'the':0, 'fenetre_casque':0, 'fenetre_russia':0, 'carte_bancaire':0}
+		pos4 = str(YpredictionConsecutiveSignal4[k])
+
+		proba[pos4] += 1
+		
+		pos = max(proba.iteritems(), key=operator.itemgetter(1))[0]
+		if pos != Yshould[k]:
+			ratio += 1
+	errors = ratio
+	ratio = float(ratio)
+	ratio = ratio / len(Yshould)
+	graph.append(100*float(errors)/len(Yshould))
+
+
+ # 	ratio = 0
+	# for k in range(len(YpredictionConsecutiveSignal3_1)):
+	# 	proba = {'me':0, 'russia':0, 'the':0, 'fenetre_casque':0, 'fenetre_russia':0, 'carte_bancaire':0}
+	# 	pos4 = str(YpredictionConsecutiveSignal4[k])
+	# 	pos3_1 = str(YpredictionConsecutiveSignal3_1[k])
+	# 	pos3_2 = str(YpredictionConsecutiveSignal3_2[k])
+	# 	pos3_3 = str(YpredictionConsecutiveSignal3_3[k])
+	# 	pos3_4 = str(YpredictionConsecutiveSignal3_4[k])
+	# 	proba[pos4] += 0
+	# 	proba[pos3_1] += 1
+	# 	proba[pos3_2] += 1
+	# 	proba[pos3_3] += 1
+	# 	proba[pos3_4] += 1
+	# 	pos = max(proba.iteritems(), key=operator.itemgetter(1))[0]
+	# 	if pos == Yshould[k]:
+	# 		ratio += 1
+	# errors = ratio
+	# ratio = float(ratio)
+	# ratio = ratio / len(Yshould)
+	# graph1.append(100-100*float(errors)/len(Yshould))
+
+
+
+
+
+ # 	ratio = 0
+	# for k in range(len(YpredictionConsecutiveSignal4)):
+	# 	proba = {'me':0, 'russia':0, 'the':0, 'fenetre_casque':0, 'fenetre_russia':0, 'carte_bancaire':0}
+	# 	pos4 = str(YpredictionConsecutiveSignal4[k])
+	# 	pos3_1 = str(YpredictionConsecutiveSignal3_1[k])
+	# 	pos3_2 = str(YpredictionConsecutiveSignal3_2[k])
+	# 	pos3_3 = str(YpredictionConsecutiveSignal3_3[k])
+	# 	pos3_4 = str(YpredictionConsecutiveSignal3_4[k])
+	# 	proba[pos4] += 1
+	# 	proba[pos3_1] += 1
+	# 	proba[pos3_2] += 1
+	# 	proba[pos3_3] += 1
+	# 	proba[pos3_4] += 1
+	# 	pos = max(proba.iteritems(), key=operator.itemgetter(1))[0]
+	# 	if pos == Yshould[k]:
+	# 		ratio += 1
+	# errors = ratio
+	# ratio = float(ratio)
+	# ratio = ratio / len(Yshould)
+	# graph2.append(100-100*float(errors)/len(Yshould))
+	
+
+	# YpredictionConsecutiveSignal = probabilityPredictionMainAndSub(sizeTest, clf4, clf3_1, clf3_2, clf3_3, clf3_3, XconsecutiveSignal, XconsecutiveSignal1, XconsecutiveSignal2, XconsecutiveSignal3, XconsecutiveSignal4, XuntouchedF,XuntouchedF1,XuntouchedF2,XuntouchedF3,XuntouchedF4, YuntouchedF)
+ # 	ratio = 0
+	# for k in range(len(YpredictionConsecutiveSignal)):
+
+	# 	if YpredictionConsecutiveSignal[k] == YuntouchedF[k]:
+	# 		ratio += 1
+	# errors = ratio
+	# ratio = float(ratio)
+	# ratio = ratio / len(Yshould)
+	# graph3.append(100-100*float(errors)/len(Yshould))
+
+
+
+	# YpredictionConsecutiveSignal = probabilityPredictionSub(sizeTest, clf3_1, clf3_2, clf3_3, clf3_3, XconsecutiveSignal1, XconsecutiveSignal2, XconsecutiveSignal3, XconsecutiveSignal4, XuntouchedF,XuntouchedF1,XuntouchedF2,XuntouchedF3,XuntouchedF4, YuntouchedF)
+ # 	ratio = 0
+	# for k in range(len(YpredictionConsecutiveSignal)):
+
+	# 	if YpredictionConsecutiveSignal[k] == YuntouchedF[k]:
+	# 		ratio += 1
+	# errors = ratio
+	# ratio = float(ratio)
+	# ratio = ratio / len(Yshould)
+	# graph4.append(100-100*float(errors)/len(Yshould))
+
+# plt.gca().set_color_cycle(['black', 'green', 'blue', 'red', 'orange'])
+# axes = plt.gca()
+# axes.set_ylim([0,45])
+# plt.plot(per,graph)
+# # plt.plot(per,graph1)
+# #plt.plot(per,graph2)
+# #plt.plot(per,graph3)
+# #plt.plot(per,graph4)
+
+# plt.legend(['Main'], loc='upper right')
+# plt.ylabel('% of errors on prediction sample')
+# plt.xlabel('% of samples used for training')
+# plt.savefig("main.png")
+
+# plt.show()
+print("Main5t")
+print(np.mean(graph))
+print(np.std(graph))
+print(mean_confidence_interval(graph))
+print(mean_confidence_interval(graph, 0.99))
+print(mean_confidence_interval(graph, 0.999))
+print(mean_confidence_interval(graph, 0.9999))
+
+
+# print("Submodels (det)")
+# print(np.mean(graph1))
+# print(np.std(graph1))
+# print(mean_confidence_interval(graph1))
+# print(mean_confidence_interval(graph1, 0.99))
+# print(mean_confidence_interval(graph1, 0.999))
+# print(mean_confidence_interval(graph1, 0.9999))
+
+# print("Submodels + Main (det)")
+# print(np.mean(graph2))
+# print(np.std(graph2))
+# print(mean_confidence_interval(graph2))
+# print(mean_confidence_interval(graph2, 0.99))
+# print(mean_confidence_interval(graph2, 0.999))
+# print(mean_confidence_interval(graph2, 0.9999))
+
+# print("Submodels + Main (proba)")
+# print(np.mean(graph3))
+# print(np.std(graph3))
+# print(mean_confidence_interval(graph3))
+# print(mean_confidence_interval(graph3, 0.99))
+# print(mean_confidence_interval(graph3, 0.999))
+# print(mean_confidence_interval(graph3, 0.9999))
+
+# print("Submodels (proba)")
+# print(np.mean(graph4))
+# print(np.std(graph4))
+# print(mean_confidence_interval(graph4))
+# print(mean_confidence_interval(graph4, 0.99))
+# print(mean_confidence_interval(graph4, 0.999))
+# print(mean_confidence_interval(graph4, 0.9999))

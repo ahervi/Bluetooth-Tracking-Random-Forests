@@ -306,10 +306,11 @@ YconsecutiveSignal = [YconsecutiveSignal[i] for i in b] # or:
 
 
 
-NumberTrees = 1010
-NumberClf = 100
-for i in range(10, NumberTrees, 10):
+NumberTrees = 206
+NumberClf = 10
+for i in range(1, NumberTrees, 5):
 	mean = 0
+	print(i)
 	for j in range(NumberClf):
 		sizeTest = 0.999
 		Yshould = YuntouchedF
@@ -422,9 +423,9 @@ plt.plot(per,graph)
 #plt.plot(per,graph3)
 #plt.plot(per,graph4)
 
-plt.legend(['Main'], loc='upper right')
 plt.ylabel('% of errors on prediction sample')
 plt.xlabel('Number of decision trees')
+axes.set_ylim([0, 45])
 plt.savefig("trees.png")
 
 plt.show()
