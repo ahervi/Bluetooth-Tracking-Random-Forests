@@ -1,0 +1,51 @@
+These are the link I used to install ruby and BlueHydra
+
+https://raspberrypi.stackexchange.com/questions/1010/can-i-install-the-ruby-version-manager
+https://www.lazzaro.com.ar/Bluehydra-raspberrypi
+
+
+Update for the RPi booting for the first time:
+
+sudo apt-get update && sudo apt-get upgrade && sudo apt-get dist-upgrade && sudo apt-get install 
+
+
+Ruby installation (stable version is 2.4.0 at this time): 
+curl -L https://get.rvm.io | bash -s stable --ruby
+gpg2 --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
+command curl -sSL https://rvm.io/mpapis.asc | gpg2 --import -
+curl -L https://get.rvm.io | bash -s stable --ruby
+source ~/.rvm/scripts/rvm
+rvm use 2.4.0
+sudo gem install bundler
+sudo apt-get install python-bluez
+sudo apt-get install python-dbus
+sudo apt-get install sqlite3 
+sudo apt-get installbluez-tools
+sudo apt-get -y install ruby-dev
+sudo apt-get install bluez
+sudo apt-get install bluez-test-scripts
+sudo apt-get install python-bluez
+sudo apt-get install python-dbus
+sudo apt-get install libsqlite3-dev
+git clone https://github.com/pwnieexpress/blue_hydra.git
+
+
+In another terminal :
+cd blue_hydra
+bundle install
+
+To install mqtt:
+
+wget http://repo.mosquitto.org/debian/mosquitto-repo.gpg.key
+sudo apt-key add mosquitto-repo.gpg.key
+sudo wget http://repo.mosquitto.org/debian/mosquitto-wheezy.list
+sudo apt-get -y install mosquitto-clients
+sudo apt-get install mosquitto
+
+For the subscriber:
+mosquitto_sub -h IPADDROFPUBLISHER -d -t NAMEOFTHECHANNEL
+
+For the publisher:
+mosquitto_pub -d -t NAMEOFTHECHANNEL -m "MESSAGE"
+
+
